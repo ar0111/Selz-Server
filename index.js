@@ -1,5 +1,5 @@
 const express = require('express');
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId, ReturnDocument } = require('mongodb');
 const cors = require('cors');
 require('dotenv').config();
 const fileUpload = require("express-fileupload");
@@ -79,6 +79,7 @@ async function run() {
     //Add Products
     app.put('/addproducts', async(req, res)=>{
       const data = req.body;
+      const id = data.id;
       const name = data.name;
       const price = data.price;
       const condition = data.condition;
@@ -89,6 +90,7 @@ async function run() {
       const category = data.category;
       const description = data.description;
       const year = data.year;
+      const quantity = data.quantity
 
       const image = req.files.image;
       const imgData = image.data;
@@ -96,6 +98,7 @@ async function run() {
       const imgBuffer = Buffer.from(encodeImg, 'base64');
 
       const product = {
+        id,
         name,
         price,
         condition,
@@ -106,6 +109,7 @@ async function run() {
         category,
         description,
         year,
+        quantity,
         image: imgBuffer
       }
       console.log(product);
@@ -113,7 +117,7 @@ async function run() {
       const option = {upsert: true};
       const updatedDoc = {
         $addToSet: {
-          product: product
+          products: product
         }
       }
 
@@ -126,7 +130,7 @@ async function run() {
       // console.log(id);
       const filter = { _id: new ObjectId(id)};
       const result = await categoriesCollection.findOne(filter);
-      const finalResult = result.product;
+      const finalResult = result.products;
       res.send(finalResult)
     })
 
@@ -138,11 +142,11 @@ async function run() {
       const query = {};
       const result = await database.collection('Categories').aggregate([
         {
-          $unwind:'$product'
+          $unwind:'$products'
         },
         {
           $match:{
-            'product.email':email
+            'products.email':email
           }
         }
       ]).toArray();
@@ -151,18 +155,29 @@ async function run() {
       const productsArray = [];
 
       result.forEach(option => {
-        const product = option.product;
+        const product = option.products;
         productsArray.push(product);
         // console.log(typeof(productsArray));
         // // productsArray.forEach(product => console.log(product))
       }) 
 
-      console.log(productsArray);
-      
-
-      // console.log(result.product);
-
       res.json(productsArray);
+    })
+
+    app.delete('/myproducts/:category/:id', async(req, res)=>{
+      const category = req.params.category;
+      const id = req.params.id;
+      // console.log(category, id);
+
+      const desireCategory = await categoriesCollection.findOne({name: category});
+
+      const productIndex = desireCategory.products.findIndex(product => product.id === id);
+      
+      desireCategory.products.splice(productIndex, 1);
+      const result = await categoriesCollection.updateOne({name: category}, { $set: { products: desireCategory.products } });
+      
+      console.log(result);
+      res.send(result);
     })
     
   } finally {
