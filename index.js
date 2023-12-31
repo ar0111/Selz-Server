@@ -157,8 +157,6 @@ async function run() {
       result.forEach(option => {
         const product = option.products;
         productsArray.push(product);
-        // console.log(typeof(productsArray));
-        // // productsArray.forEach(product => console.log(product))
       }) 
 
       res.json(productsArray);
@@ -177,6 +175,46 @@ async function run() {
       const result = await categoriesCollection.updateOne({name: category}, { $set: { products: desireCategory.products } });
       
       console.log(result);
+      res.send(result);
+    })
+
+    //Update A Product
+    app.get('/update/:category/:id', async(req, res)=>{
+      const category = req.params.category;
+      const id = req.params.id;
+      // console.log(category, id);
+
+      const desireCategory = await categoriesCollection.findOne({name: category});
+
+      const productIndex = desireCategory.products.findIndex(product => product.id === id);
+      
+      const result = desireCategory.products.splice(productIndex, 1);
+
+      res.send(result)
+    })
+
+    app.put('/update/:category/:id', async(req, res)=>{
+      const category = req.params.category;
+      const id = req.params.id;
+      const price = req.body.price;
+      const quantity = req.body.quantity;
+
+      const desireCategory = await categoriesCollection.findOne({name: category});
+      console.log(desireCategory._id);
+
+      const productIndex = desireCategory.products.findIndex(product => product.id === id);
+
+      const result = await categoriesCollection.updateOne(
+        {_id: new ObjectId(desireCategory._id), 'products.id': id},
+        {
+          $set: {
+            'products.$[elem].price': price,
+            'products.$[elem].quantity': quantity,
+          },
+        },
+        { arrayFilters: [{ 'elem.id': id }] }
+      )
+
       res.send(result);
     })
     
