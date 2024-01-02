@@ -28,6 +28,7 @@ async function run() {
     const database = client.db("SelzMart");
     const usersCollection = database.collection('Users');
     const categoriesCollection = database.collection('Categories');
+    const bookingsCollection = database.collection('Bookings');
 
     //Add User
     app.post('/users', async(req, res)=>{
@@ -209,6 +210,35 @@ async function run() {
         {
           $set: {
             'products.$[elem].price': price,
+            'products.$[elem].quantity': quantity,
+          },
+        },
+        { arrayFilters: [{ 'elem.id': id }] }
+      )
+
+      res.send(result);
+    })
+
+    //Booking Post
+    app.post('/bookings', async(req, res)=>{
+      const booking = req.body;
+      const result = await bookingsCollection.insertOne(booking);
+      res.send(result);
+    })
+
+    app.put('/updateproduct/:category/:id', async(req, res)=>{
+      const category = req.params.category;
+      const id = req.params.id;
+      const quantity = (parseInt(req.body.quantity) - 1).toString();
+
+      const desireCategory = await categoriesCollection.findOne({name: category});
+
+      const productIndex = desireCategory.products.findIndex(product => product.id === id);
+
+      const result = await categoriesCollection.updateOne(
+        {_id: new ObjectId(desireCategory._id), 'products.id': id},
+        {
+          $set: {
             'products.$[elem].quantity': quantity,
           },
         },
