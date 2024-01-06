@@ -44,6 +44,48 @@ async function run() {
       res.send(result);
     })
 
+    app.put('/users/:email', async(req, res)=>{
+      const email = req.params.email;
+      const emailVerifiedValue = req.body.user.emailVerified;
+      console.log(email, emailVerifiedValue);
+      const query = {email};
+      const user = await usersCollection.findOne(query);
+      const filter = {_id: new ObjectId(user._id)};
+      const option = {upsert: true};
+      const updatedDoc = {
+        $set: {
+          emailVerified: emailVerifiedValue
+        }
+      }
+
+      const result = await usersCollection.updateOne(filter, updatedDoc, option);
+      res.send(result)
+    })
+
+    //Make Admin
+
+    app.put('/users/admin/:id', async(req, res)=>{
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)};
+      const option = {upsert: true};
+      const updatedDoc = {
+        $set:{
+          primaryRole : 'admin'
+        }
+      }
+
+      const result = await usersCollection.updateOne(filter, updatedDoc, option);
+      res.send(result);
+    })
+
+    app.delete('/users/admin/:id', async(req, res)=>{
+      const id = req.params.id;
+      console.log(id);
+      const filter = { _id: new ObjectId(id)};
+      const result = await usersCollection.deleteOne(filter);
+      res.send(result);
+    })
+
     //Add Category
 
     app.get('/addcategories', async(req, res)=>{
