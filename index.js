@@ -44,6 +44,14 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/users/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email};
+      const user = await usersCollection.findOne(query);
+      res.send(user)
+
+    })
+
     app.put('/users/:email', async(req, res)=>{
       const email = req.params.email;
       const emailVerifiedValue = req.body.user.emailVerified;
@@ -76,6 +84,14 @@ async function run() {
 
       const result = await usersCollection.updateOne(filter, updatedDoc, option);
       res.send(result);
+    })
+
+    //Check User is Admin/Not
+    app.get('/users/admin/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email};
+      const user = await usersCollection.findOne(query);
+      res.send({isAdmin: user?.primaryRole === 'admin'})
     })
 
     app.delete('/users/admin/:id', async(req, res)=>{
