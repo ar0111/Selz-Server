@@ -52,6 +52,15 @@ async function run() {
 
     })
 
+    app.get('/desieruser/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email};
+      const user = await usersCollection.findOne(query);
+      console.log(user);
+      res.send(user)
+
+    })
+
     app.put('/users/:email', async(req, res)=>{
       const email = req.params.email;
       const emailVerifiedValue = req.body.user.emailVerified;
@@ -259,7 +268,7 @@ async function run() {
       const quantity = req.body.quantity;
 
       const desireCategory = await categoriesCollection.findOne({name: category});
-      console.log(desireCategory._id);
+      // console.log(desireCategory._id);
 
       const productIndex = desireCategory.products.findIndex(product => product.id === id);
 
@@ -283,6 +292,48 @@ async function run() {
       const result = await bookingsCollection.insertOne(booking);
       res.send(result);
     })
+
+    app.get('/bookings', async(req, res)=>{
+      const email = req.query.email;
+      // console.log(email);
+      const filter = {buyerEmail:email};
+      const result = await bookingsCollection.find(filter).toArray();
+      res.send(result);
+    })
+
+    app.delete('/bookings/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await bookingsCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    app.put('/bookings/:category/:id', async(req, res)=>{
+      const category = req.params.category;
+      const id = req.params.id;
+      // const quantity = (req.body.quantity + 1).toString();
+
+      const desireCategory = await categoriesCollection.findOne({name: category});
+
+      const productIndex = desireCategory.products.findIndex(product => product.id === id);
+
+      const quantity = desireCategory.products[productIndex].quantity;
+      const finalQuantity = (parseInt(quantity) + 1).toString();
+
+      const result = await categoriesCollection.updateOne(
+        {_id: new ObjectId(desireCategory._id), 'products.id': id},
+        {
+          $set: {
+            'products.$[elem].quantity': finalQuantity,
+          },
+        },
+        { arrayFilters: [{ 'elem.id': id }] }
+      )
+
+      res.send(result);
+    })
+
+    //Update Product
 
     app.put('/updateproduct/:category/:id', async(req, res)=>{
       const category = req.params.category;
