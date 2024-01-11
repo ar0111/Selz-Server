@@ -56,7 +56,7 @@ async function run() {
       const email = req.params.email;
       const query = {email};
       const user = await usersCollection.findOne(query);
-      console.log(user);
+      // console.log(user);
       res.send(user)
 
     })
@@ -77,6 +77,48 @@ async function run() {
 
       const result = await usersCollection.updateOne(filter, updatedDoc, option);
       res.send(result)
+    })
+
+    //Update User
+
+    app.put('/updateUser/:email', async(req, res)=>{
+      const email = req.params.email;
+      console.log(email);
+      const data = req.body;
+
+      const contactNumber = data.phone;
+      const dateOfBirth = data.date;
+      const address = data.address;
+      const location = data.location;
+
+      const image = req.files.image;
+      const imgData = image.data;
+      const encodeImg = imgData.toString('base64');
+      const imgBuffer = Buffer.from(encodeImg, 'base64');
+
+      const updatedInformation = {
+        contactNumber,
+        dateOfBirth, 
+        address,
+        location,
+        image:imgBuffer
+      }
+
+      const query = {email};
+      const user = await usersCollection.findOne(query);
+      const filter = {_id: new ObjectId(user._id)};
+      console.log(user);
+
+      const option = {upsert: true};
+      const updatedDoc = {
+        $set: {
+          ContactNumber: contactNumber,
+        }
+      }
+
+      const result = await categoriesCollection.updateOne(filter, updatedDoc, option);
+      res.send(result);
+
     })
 
     //Make Admin
@@ -247,7 +289,7 @@ async function run() {
     })
 
     //Update A Product
-    app.get('/update/:category/:id', async(req, res)=>{
+    app.get('/dashboard/update/:category/:id', async(req, res)=>{
       const category = req.params.category;
       const id = req.params.id;
       // console.log(category, id);
