@@ -356,6 +356,16 @@ async function run() {
       res.send(finalResult);
     })
 
+    app.get('/bookings-orders', async(req, res)=>{
+      const email = req.query.email;
+      console.log(email);
+      const filter = {buyerEmail:email};
+      const result = await bookingsCollection.find(filter).toArray();
+      console.log(result);
+      
+      res.send(result);
+    })
+
     app.delete('/bookings/:id', async(req, res)=>{
       const id = req.params.id;
       const query = {_id: new ObjectId(id)};
