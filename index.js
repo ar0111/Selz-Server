@@ -3,8 +3,11 @@ const { MongoClient, ServerApiVersion, ObjectId, ReturnDocument } = require('mon
 const cors = require('cors');
 require('dotenv').config();
 const fileUpload = require("express-fileupload");
-const app = express()
 const port = process.env.PORT || 3000
+
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+const app = express();
 
 //midleware
 app.use(cors());
@@ -29,6 +32,8 @@ async function run() {
     const usersCollection = database.collection('Users');
     const categoriesCollection = database.collection('Categories');
     const bookingsCollection = database.collection('Bookings');
+    const paymentCollection = database.collection('Payments');
+    const blogsCollection = database.collection('Blogs');
 
     //Add User
     app.post('/users', async(req, res)=>{
@@ -87,6 +92,7 @@ async function run() {
       const data = req.body;
 
       const contactNumber = data.phone;
+      console.log(contactNumber);
       const dateOfBirth = data.date;
       const address = data.address;
       const location = data.location;
@@ -96,27 +102,23 @@ async function run() {
       const encodeImg = imgData.toString('base64');
       const imgBuffer = Buffer.from(encodeImg, 'base64');
 
-      const updatedInformation = {
-        contactNumber,
-        dateOfBirth, 
-        address,
-        location,
-        image:imgBuffer
-      }
-
       const query = {email};
       const user = await usersCollection.findOne(query);
       const filter = {_id: new ObjectId(user._id)};
-      console.log(user);
+      // console.log(user);
 
       const option = {upsert: true};
       const updatedDoc = {
         $set: {
           ContactNumber: contactNumber,
+          dateOfBirth: dateOfBirth,
+          address: address,
+          location: location,
+          image: imgBuffer
         }
       }
 
-      const result = await categoriesCollection.updateOne(filter, updatedDoc, option);
+      const result = await usersCollection.updateOne(filter, updatedDoc, option);
       res.send(result);
 
     })
@@ -340,7 +342,18 @@ async function run() {
       // console.log(email);
       const filter = {buyerEmail:email};
       const result = await bookingsCollection.find(filter).toArray();
-      res.send(result);
+      // console.log(result);
+      const finalResult = [];
+
+      result.map(booking =>{
+        if(!booking.paid){
+          finalResult.push(booking);
+        }
+      })
+
+      // console.log(finalResult);
+      
+      res.send(finalResult);
     })
 
     app.delete('/bookings/:id', async(req, res)=>{
@@ -397,6 +410,66 @@ async function run() {
       )
 
       res.send(result);
+    })
+
+    //Payment
+    app.post('/create-payment-intent', async(req, res)=>{
+      const booking = req.body;
+      const price = booking.price;
+      // console.log(typeof(price));
+      const amount = price*100;
+      // console.log(amount);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        currency: "usd",
+        amount: amount,
+        "payment_method_types": [
+          "card"
+        ],
+      })
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+
+    })
+
+    app.post('/payments', async(req, res)=>{
+      const payment = req.body;
+      // console.log(payment.orderList);
+      const result = await paymentCollection.insertOne(payment);
+      payment.orderList.map(booking => {
+        const id = booking._id;
+        const filter = {_id: new ObjectId(id)};
+
+        const updatedDoc = {
+          $set:{
+            paid: true,
+            transactionId: payment.transactionId
+          }
+        }
+
+        const updatedResult = bookingsCollection.updateOne(filter, updatedDoc)
+      })
+      res.send(result);
+    })
+
+    //Blog
+    app.get('/blogs', async(req, res)=>{
+      const query = {};
+      const result = await blogsCollection.find(query).toArray();
+      console.log(result);
+      res.send(result);
+    })
+
+    app.get('/blogs/:id', async(req, res)=>{
+      const id = req.params.id;
+      // console.log(id);
+      const filter = { _id: new ObjectId(id)};
+      const result = await blogsCollection.findOne(filter);
+      // console.log(result);
+      // const finalResult = result.products;
+      res.send(result)
     })
     
   } finally {
