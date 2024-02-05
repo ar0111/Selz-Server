@@ -34,6 +34,8 @@ async function run() {
     const bookingsCollection = database.collection('Bookings');
     const paymentCollection = database.collection('Payments');
     const blogsCollection = database.collection('Blogs');
+    const comparesCollection = database.collection('Compare');
+    const favouriteCollection = database.collection('Favourite');
 
     //Add User
     app.post('/users', async(req, res)=>{
@@ -481,6 +483,71 @@ async function run() {
       // const finalResult = result.products;
       res.send(result)
     })
+
+    //Compare
+    app.post('/compare', async(req, res)=>{
+      const compare = req.body;
+      const query = {
+        id:compare.id,
+        email:compare.email
+      }
+
+      console.log(query);
+
+      const alreadyAdded = await comparesCollection.find(query).toArray();
+      console.log(alreadyAdded);
+      if(alreadyAdded.length){
+        const message = `You have already added ${compare.name}`;
+        return res.send({acknowledged:false, message})
+      }
+
+      const result = await comparesCollection.insertOne(compare);
+      res.send(result);
+    })
+
+    app.get('/compareproduct/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email};
+
+      const result = await comparesCollection.find(query).toArray();
+      // console.log(result);
+      res.send(result);
+    })
+
+    //Favourite
+    app.post('/favourite', async(req, res)=>{
+      const favaourite = req.body;
+      const query = {
+        id:favaourite.id,
+        email:favaourite.email
+      }
+
+      const alreadyAdded = await favouriteCollection.find(query).toArray();
+      if(alreadyAdded.length){
+        const message = `You have already added ${favaourite.name}`;
+        return res.send({acknowledged:false, message})
+      }
+
+      const result = await favouriteCollection.insertOne(favaourite);
+      res.send(result);
+    })
+
+    app.get('/myfavourite/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email};
+
+      const result = await favouriteCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    app.delete('/myfavourite/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)};
+
+      const result = await favouriteCollection.deleteOne(query);
+      res.send(result);
+    })
+
     
   } finally {
     // Ensures that the client will close when you finish/error
